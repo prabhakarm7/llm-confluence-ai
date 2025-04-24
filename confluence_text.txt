@@ -1,0 +1,7 @@
+CTO- John Doe Client Tech SRE Leads: Email DL- srelead@jomcom Region SRE LeaD Us (NJ) deepa@jom.com APAC (India) suresh@jom.com subramaniam@jom.com EMEA (Glasgow) elizabeth@jom.com Critical Products in Client Tech No Area Product  Seal Why is this critical CTO-1 Tech Lead/Ao SRE Lead Link to Integrating systems/impact  Comments 1 Client Data The Carty and Pccoutn (CandPa) 12345 it mainsts client and operational information in support of global investments Management process, Karthik John,Senior (johnn.enior@jom.com Deepa CanPa Partner Systems 2 PM Marketing Global PM Web 78900 Public facing PM website for marketing used by external clients Jemal Khah Jorgan@jom.com Suresh PMweb -Up Stream & Downstream details PMWeb- Incident Management System Process  Action items Add action items to close the loop on open questions or discussion topics: 
+ 
+ 27 
+ 27 
+ incomplete 
+ 
+  Decisions Type /decision to record the decisions you make in this meeting: 841df1b6-58e2-46f9-a731-87e41b1e0e6b 4436b3ac-d4b6-49e6-8173-2d63cb13b79e DECIDED
