@@ -1,13 +1,19 @@
 // src/pages/CreateDocument.tsx
 import { useState } from 'react';
 import { Box, Grid, Tab, Tabs, Typography, Paper } from '@mui/material';
+import { Description, PictureAsPdf, Group, Email } from '@mui/icons-material';
 import ConfluenceLoaderForm from '../components/Loaders/ConfluenceLoaderForm';
 import PDFLoaderForm from '../components/Loaders/PDFLoaderForm';
 import TeamsLoaderForm from '../components/Loaders/TeamsLoaderForm';
 import EmailLoaderForm from '../components/Loaders/EmailLoaderForm';
 import MetadataDisplay from '../components/MetadataDisplay';
 
-const loaderTabs = ["Confluence", "PDF", "Teams", "Email"];
+const loaderTabs = [
+  { label: "Confluence", icon: <Description fontSize="small" /> },
+  { label: "PDF", icon: <PictureAsPdf fontSize="small" /> },
+  { label: "Teams", icon: <Group fontSize="small" /> },
+  { label: "Email", icon: <Email fontSize="small" /> },
+];
 
 export default function CreateDocument() {
   const [tabIndex, setTabIndex] = useState(0);
@@ -45,15 +51,20 @@ export default function CreateDocument() {
           onChange={handleTabChange}
           sx={{ borderRight: 1, borderColor: 'divider', height: '100%' }}
         >
-          {loaderTabs.map((label, index) => (
-            <Tab label={label} key={index} />
+          {loaderTabs.map((tab, index) => (
+            <Tab
+              key={index}
+              icon={tab.icon}
+              iconPosition="start"
+              label={tab.label}
+            />
           ))}
         </Tabs>
       </Grid>
 
       <Grid item xs={10} p={3}>
         <Typography variant="h6" gutterBottom>
-          {loaderTabs[tabIndex]} Loader
+          {loaderTabs[tabIndex].label} Loader
         </Typography>
         <Paper elevation={1} sx={{ p: 2, mb: 4 }}>{renderLoader()}</Paper>
         <MetadataDisplay data={metadata} />
@@ -61,74 +72,3 @@ export default function CreateDocument() {
     </Grid>
   );
 }
-
-
-// src/components/Loaders/ConfluenceLoaderForm.tsx
-import { useState } from 'react';
-import { Button, TextField, Stack } from '@mui/material';
-
-interface Props {
-  onLoaded: (metadata: any) => void;
-}
-
-const ConfluenceLoaderForm = ({ onLoaded }: Props) => {
-  const [url, setUrl] = useState('');
-
-  const handleSubmit = () => {
-    // Simulate metadata fetch after loading
-    onLoaded({
-      title: "Confluence Page Title",
-      author: "Jane Doe",
-      created_at: "2024-05-01",
-      tags: ["confluence", "internal"],
-    });
-  };
-
-  return (
-    <Stack spacing={2}>
-      <TextField
-        label="Confluence Page URL"
-        fullWidth
-        value={url}
-        onChange={(e) => setUrl(e.target.value)}
-      />
-      <Button variant="contained" onClick={handleSubmit}>
-        Load Confluence Page
-      </Button>
-    </Stack>
-  );
-};
-
-export default ConfluenceLoaderForm;
-
-
-// src/components/MetadataDisplay.tsx
-import { Box, Chip, Stack, Typography } from '@mui/material';
-
-interface Props {
-  data: any;
-}
-
-const MetadataDisplay = ({ data }: Props) => {
-  if (!data) return null;
-
-  return (
-    <Box>
-      <Typography variant="subtitle1">Metadata</Typography>
-      <Stack spacing={1} mt={1}>
-        {data.title && <Typography>Title: {data.title}</Typography>}
-        {data.author && <Typography>Author: {data.author}</Typography>}
-        {data.created_at && <Typography>Created At: {data.created_at}</Typography>}
-        {data.tags && (
-          <Stack direction="row" spacing={1}>
-            {data.tags.map((tag: string, idx: number) => (
-              <Chip key={idx} label={tag} />
-            ))}
-          </Stack>
-        )}
-      </Stack>
-    </Box>
-  );
-};
-
-export default MetadataDisplay;
