@@ -1,0 +1,47 @@
+# create chunk context generation chain
+from langchain.prompts import ChatPromptTemplate
+from langchain.schema import StrOutputParser
+from langchain_openai import ChatOpenAI
+
+chatgpt = ChatOpenAI(model_name="gpt-4o-mini", temperature=0)
+
+def generate_chunk_context(document, chunk):
+
+    chunk_process_prompt = """You are an AI assistant specializing in research  
+                              paper analysis. Your task is to provide brief, 
+                              relevant context for a chunk of text based on the 
+                              following research paper.
+
+                              Here is the research paper:
+                              <paper>
+                              {paper}
+                              </paper>
+                            
+                              Here is the chunk we want to situate within the whole 
+                              document:
+                              <chunk>
+                              {chunk}
+                              </chunk>
+                            
+                              Provide a concise context (3-4 sentences max) for this 
+                              chunk, considering the following guidelines:
+
+                              - Give a short succinct context to situate this chunk 
+                                within the overall document for the purposes of  
+                                improving search retrieval of the chunk.
+                              - Answer only with the succinct context and nothing 
+                                else.
+                              - Context should be mentioned like 'Focuses on ....'
+                                do not mention 'this chunk or section focuses on...'
+                              
+                              Context:
+                           """
+    
+    prompt_template = ChatPromptTemplate.from_template(chunk_process_prompt)
+    agentic_chunk_chain = (prompt_template
+                                |
+                            chatgpt
+                                |
+                            StrOutputParser())
+    context = agentic_chunk_chain.invoke({'paper': document, 'chunk': chunk})
+    return context
