@@ -36,7 +36,6 @@ const Chatbot: React.FC = () => {
     setInput("");
     setLoading(true);
 
-    // Simulated assistant reply
     setTimeout(() => {
       const assistantReply: Message = {
         type: "assistant",
@@ -58,18 +57,18 @@ const Chatbot: React.FC = () => {
     <Box
       sx={{
         height: "100vh",
+        bgcolor: "#343541",
         display: "flex",
         flexDirection: "column",
-        bgcolor: "#343541",
+        position: "relative",
       }}
     >
       <Box
         sx={{
           flex: 1,
           overflowY: "auto",
-          p: 2,
-          display: "flex",
-          flexDirection: "column",
+          p: { xs: 2, sm: 4 },
+          pb: "160px",
         }}
       >
         {messages.map((msg, index) => (
@@ -83,6 +82,8 @@ const Chatbot: React.FC = () => {
               bgcolor: msg.type === "user" ? "#343541" : "#444654",
               p: 2,
               borderRadius: 2,
+              maxWidth: "768px",
+              mx: "auto",
             }}
           >
             <Box sx={{ mr: 2 }}>
@@ -110,6 +111,8 @@ const Chatbot: React.FC = () => {
               p: 2,
               borderRadius: 2,
               mb: 2,
+              maxWidth: "768px",
+              mx: "auto",
             }}
           >
             <Box sx={{ mr: 2 }}>
@@ -124,50 +127,58 @@ const Chatbot: React.FC = () => {
 
       <Box
         sx={{
+          position: "fixed",
+          bottom: 0,
+          left: 0,
+          right: 0,
           p: 2,
+          bgcolor: "#343541",
           borderTop: "1px solid #555",
-          bgcolor: "#40414f",
+          display: "flex",
+          justifyContent: "center",
         }}
       >
-        <TextField
-          fullWidth
-          multiline
-          placeholder="Send a message"
-          variant="outlined"
-          value={input}
-          onChange={(e) => setInput(e.target.value)}
-          onKeyDown={handleKeyPress}
-          InputProps={{
-            endAdornment: (
-              <IconButton onClick={handleSend}>
-                <SendIcon sx={{ color: "#10a37f" }} />
-              </IconButton>
-            ),
-            sx: {
-              bgcolor: "#40414f",
-              color: "#dcdcdc",
-              border: "1px solid #555",
-              borderRadius: 2,
-              p: 1,
-            },
-          }}
+        <Box
           sx={{
-            "& .MuiOutlinedInput-root": {
-              "& fieldset": {
-                border: "none",
-              },
-              "&:hover fieldset": {
-                border: "none",
-              },
-              "&.Mui-focused fieldset": {
-                border: "none",
-              },
-            },
+            width: "100%",
+            maxWidth: "768px",
+            display: "flex",
+            alignItems: "center",
+            bgcolor: "#40414f",
+            borderRadius: 2,
+            px: 2,
           }}
-        />
+        >
+          <TextField
+            fullWidth
+            multiline
+            placeholder="Send a message"
+            variant="standard"
+            value={input}
+            onChange={(e) => setInput(e.target.value)}
+            onKeyDown={handleKeyPress}
+            InputProps={{
+              disableUnderline: true,
+              sx: {
+                color: "#dcdcdc",
+                py: 1.2,
+              },
+            }}
+            sx={{
+              mr: 1,
+            }}
+          />
+          <IconButton onClick={handleSend}>
+            <SendIcon sx={{ color: "#10a37f" }} />
+          </IconButton>
+        </Box>
       </Box>
     </Box>
   );
 };
-
+const theme = createTheme({
+    typography: {
+      fontFamily: `"Inter", system-ui, -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif`,
+    },
+  });
 export default Chatbot;
