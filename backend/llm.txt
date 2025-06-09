@@ -48,3 +48,76 @@
 # [3] Implement DAG parser & skew detection
 # [4] Apply optimization rule engine with severity tags
 # [5] Wire frontend/backend for real-time results
+
+
+✅ Key Benefits:
+🔍 Code Intelligence: Parses PySpark scripts to build DAGs and flag expensive transformations
+
+🧠 LLM-Driven Optimization: Applies expert-crafted rules via Agent Q for performance uplift
+
+💸 Time & Cost Estimation: Agent M quantifies compute impact based on dataset and schema
+
+📊 Cluster Tuning Suggestions: Agent ClusterMind recommends optimal Spark configs
+
+🎨 Visual DAG UI: Interactive DAG map with color-coded insights and actionable tooltips
+
+🧾 Rulebook Integration: Direct links to markdown-based Spark best practices per operation
+
+💾 History Tracker: Save and export snapshots with user notes and embedded recommendations
+
+🚀 Spark 007 – Mission Optimization Protocol
+"License to Optimize. Mission: Spark Performance."
+
+🧠 What is Spark 007?
+Spark 007 is a mission-grade LLM-powered agent designed to intelligently analyze PySpark code, visualize the execution DAG, detect bottlenecks, and apply 50+ Spark best practices to boost performance and reduce costs — all through a sleek MI6-inspired interface.
+
+🔍 Key Features
+Agent	Role	Description
+🎯 Agent Spark 007	DAG Extractor	Parses PySpark code to generate DAGs and tag transformations
+🧠 Agent Q	Rule Engine	Applies 50+ best practices for joins, caching, formats, filters
+💰 Agent M	Cost Analyst	Estimates time/memory/cost based on dataset size and schema
+⚙️ ClusterMind	Tuning AI	Suggests ideal Spark cluster configs for performance vs cost
+💻 Moneypenny Console	UI	A React + MUI interface for code input, DAG view, reports & export
+
+🗺️ Live DAG Visualization
+Interactive DAG UI with color-coded stages (Red = shuffle, Yellow = skew, Green = optimized)
+
+Clickable nodes showing tooltips, modal suggestions, and links to rulebook entries
+
+Downloadable DAG snapshot and embedded insights
+
+📘 Built-in Optimization Rulebook
+Markdown docs for each transformation (e.g., join, read, udf)
+
+Accessible via modal links or directly at /rulebook/:stage
+
+Full PDF export available: 📥 Download Optimization Rulebook
+
+💾 History Tracker
+Save DAG snapshots with comments and rule links
+
+Export past optimizations for review or sharing
+
+Persist data via localStorage or optional backend integration
+
+🧪 Try It Out
+✅ Upload your PySpark code →
+🧠 Let Spark 007 analyze it →
+📊 View optimization report →
+📎 Export DAG + Download PDF report
+
+🛠️ Tech Stack
+Frontend: React + MUI + ReactFlow
+
+Backend: FastAPI + OpenAI + Markdown Rulebook
+
+Visualization: ReactFlow DAG Graph
+
+Export Options: JSON, PDF, Rule Markdown
+
+📌 Next Missions
+ Add login + team annotation sharing
+
+ GitHub integration for auto-scan of Spark projects
+
+ Export HTML report with embedded DAG & rule analysis
