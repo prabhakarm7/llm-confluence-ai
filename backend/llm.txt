@@ -1,0 +1,50 @@
+# Spark 007 - Mission Optimization Protocol
+
+# Architecture Overview
+
+# 1. Agent Spark 007 (Core Engine)
+# - Parses PySpark code
+# - Generates DAG from transformations/actions
+# - Identifies shuffle, wide/narrow transformations, UDFs, loops
+
+# 2. Agent Q (Optimization Rule Engine)
+# - Applies 50+ best practices for Spark code
+# - Checks join types, caching, file formats, API use, predicate pushdown
+# - Highlights tasks as High I/O, CPU, Shuffle
+
+# 3. Agent M (Cost Intelligence Officer)
+# - Accepts dataset size, schema
+# - Estimates execution time and memory requirements
+# - Maps task complexity to cost using heuristics
+
+# 4. Agent ClusterMind (Cluster Tuner)
+# - Suggests ideal Spark config: executor memory, node type, shuffle partitions
+# - Validates against estimated data and DAG complexity
+
+# 5. Moneypenny Console (UI)
+# - React + MUI interface
+# - Input: Code upload or paste, dataset info, cluster profile
+# - Outputs: DAG visual, cost report, optimization suggestions
+
+# ---
+# FastAPI Backend (Python)
+# /analyze-code:
+#     - Input: Code, dataset info, schema
+#     - Output: DAG structure (JSON), optimization report, cost breakdown
+# /generate-dag:
+#     - Returns visual DAG info
+# /suggest-cluster:
+#     - Input: DAG + estimated size
+#     - Output: Config recommendations
+
+# React Frontend (MUI Theme)
+# - Left Panel: Code Input, Dataset Info, Cluster Config
+# - Right Panel: Tabs - [DAG Visual | Optimization Report | Cluster Suggestion]
+# - Color legend: Red (High Shuffle), Yellow (Skew Detected), Green (Optimized)
+
+# -- Next Steps --
+# [1] Generate detailed FastAPI endpoint scaffolding
+# [2] Design React UI layout using MUI Tabs
+# [3] Implement DAG parser & skew detection
+# [4] Apply optimization rule engine with severity tags
+# [5] Wire frontend/backend for real-time results
