@@ -182,3 +182,4 @@ const theme = createTheme({
     },
   });
 export default Chatbot;
+/Users/prabhakarmudliyar/Downloads/genially_6838b1981bcbde8cf3c96d30_images 2/002_INDEX.jpg /Users/prabhakarmudliyar/Downloads/genially_6838b1981bcbde8cf3c96d30_images 2/004_OURVISION.jpg

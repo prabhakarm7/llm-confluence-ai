@@ -1,7 +1,7 @@
 import React, { useState } from "react";
 import { Box } from "@mui/material";
 import PromptContainer from "./PromptContainer";
-import RightPanel from "./RightPanel";
+import RightPanel from "./LeftPanel";
 
 const MainLayout = () => {
   const [prompt, setPrompt] = useState("");
