@@ -52,3 +52,392 @@ You can now:
 ✅ Combine both approaches - search traditionally, then analyze with LLM
 ✅ Progressive enhancement - start basic, add AI when needed
 🚀 Environment Setup
+
+Create an architecture diagram showing GitHub Copilot integration with a Confluence MCP server.
+
+Components needed:
+- User Interface Layer: VS Code, CLI, Copilot Chat
+- GitHub Copilot Agent: AI capabilities, extensions, chat interface  
+- MCP Protocol Layer: Client, JSON-RPC transport, tool/resource registries
+- Confluence MCP Server: Traditional tools (CRUD), AI tools (ask_confluence, find_information, compare_documents, summarize_space), OAuth auth
+- LLM Integration: Processor connecting to OpenAI, Anthropic, Ollama, Azure
+- Confluence Backend: REST API, spaces, pages, users, search
+- External Integrations: GitHub repos, Jira, Slack, Teams
+
+Show data flows:
+- User queries → Copilot → MCP → Confluence Server → LLM analysis → Response
+- Include authentication flows (OAuth 1.0a)
+- Show both traditional and AI-enhanced workflows
+
+Use hierarchical layout, color-code by layer, include workflow annotations for developer Q&A, code documentation, and code review scenarios.
+
+
+# Eraser Architecture Diagram Prompt
+# GitHub Copilot + Confluence MCP Server Integration
+
+title: "GitHub Copilot + Confluence MCP Integration Architecture"
+description: "Complete system architecture showing how GitHub Copilot Agent integrates with Confluence documentation through Model Context Protocol (MCP)"
+
+# Define the main architectural layers and components
+components:
+  
+  # User Interface Layer
+  user_interface:
+    - name: "Developer in VS Code"
+      type: user
+      icon: person
+      color: blue
+    - name: "GitHub CLI"
+      type: cli
+      icon: terminal
+      color: blue
+    - name: "GitHub Copilot Chat"
+      type: web_interface
+      icon: chat
+      color: blue
+    - name: "IDE Extensions"
+      type: extension
+      icon: plugin
+      color: blue
+
+  # GitHub Copilot Agent Layer
+  copilot_layer:
+    - name: "GitHub Copilot Agent"
+      type: ai_agent
+      icon: robot
+      color: purple
+      capabilities:
+        - "Code Generation"
+        - "Documentation Analysis"
+        - "Code Explanation"
+        - "Code Review"
+    - name: "Copilot Chat Interface"
+      type: interface
+      icon: message
+      color: purple
+    - name: "Copilot Extensions"
+      type: extension
+      icon: plugin
+      color: purple
+
+  # Model Context Protocol Layer
+  mcp_layer:
+    - name: "MCP Client in Copilot"
+      type: client
+      icon: network
+      color: green
+    - name: "JSON-RPC Transport"
+      type: transport
+      icon: arrow-both
+      color: green
+      protocol: "stdio"
+    - name: "Tool Registry"
+      type: registry
+      icon: tools
+      color: green
+    - name: "Resource Registry"
+      type: registry
+      icon: database
+      color: green
+
+  # Confluence MCP Server
+  mcp_server:
+    - name: "Confluence MCP Server"
+      type: server
+      icon: server
+      color: orange
+      
+    # Traditional Confluence Tools
+    traditional_tools:
+      - name: "get_spaces"
+        type: tool
+        icon: folder
+      - name: "get_pages"
+        type: tool
+        icon: file
+      - name: "get_page_content"
+        type: tool
+        icon: document
+      - name: "create_page"
+        type: tool
+        icon: plus
+      - name: "update_page"
+        type: tool
+        icon: edit
+      - name: "delete_page"
+        type: tool
+        icon: trash
+      - name: "search_content"
+        type: tool
+        icon: search
+      - name: "get_user_info"
+        type: tool
+        icon: user
+
+    # AI-Powered Tools
+    ai_tools:
+      - name: "ask_confluence"
+        type: ai_tool
+        icon: question
+        description: "🧠 Intelligent Q&A"
+      - name: "find_information"
+        type: ai_tool
+        icon: search-plus
+        description: "🔍 Smart Information Discovery"
+      - name: "compare_documents"
+        type: ai_tool
+        icon: compare
+        description: "📊 Document Analysis"
+      - name: "summarize_space"
+        type: ai_tool
+        icon: summary
+        description: "📝 Space Summarization"
+
+    # Authentication
+    auth:
+      - name: "OAuth 1.0a Helper"
+        type: auth
+        icon: key
+        color: red
+      - name: "Certificate Auth"
+        type: auth
+        icon: certificate
+        color: red
+
+  # LLM Integration Layer
+  llm_layer:
+    - name: "LLM Processor"
+      type: processor
+      icon: brain
+      color: pink
+    
+    llm_providers:
+      - name: "OpenAI GPT"
+        type: llm
+        icon: openai
+        color: pink
+      - name: "Anthropic Claude"
+        type: llm
+        icon: anthropic
+        color: pink
+      - name: "Ollama Local"
+        type: llm
+        icon: server
+        color: pink
+      - name: "Azure OpenAI"
+        type: llm
+        icon: azure
+        color: pink
+
+  # Confluence Backend
+  confluence_backend:
+    - name: "Confluence REST API"
+      type: api
+      icon: api
+      color: cyan
+    - name: "Spaces"
+      type: data
+      icon: folder-tree
+      color: cyan
+    - name: "Pages & Content"
+      type: data
+      icon: document-stack
+      color: cyan
+    - name: "Users & Permissions"
+      type: data
+      icon: users
+      color: cyan
+    - name: "Search Engine"
+      type: service
+      icon: search-engine
+      color: cyan
+
+  # External Integrations
+  external:
+    - name: "GitHub Repositories"
+      type: external
+      icon: github
+      color: gray
+    - name: "Jira Issues"
+      type: external
+      icon: jira
+      color: gray
+    - name: "Slack Notifications"
+      type: external
+      icon: slack
+      color: gray
+    - name: "MS Teams"
+      type: external
+      icon: teams
+      color: gray
+
+# Define the connections and data flows
+connections:
+  
+  # User to Copilot flows
+  user_flows:
+    - from: "Developer in VS Code"
+      to: "GitHub Copilot Agent"
+      type: "user_interaction"
+      label: "Natural language queries"
+    - from: "GitHub CLI"
+      to: "GitHub Copilot Agent"
+      type: "command"
+      label: "CLI commands"
+    - from: "GitHub Copilot Chat"
+      to: "Copilot Chat Interface"
+      type: "chat"
+      label: "Chat messages"
+
+  # Copilot internal flows
+  copilot_flows:
+    - from: "GitHub Copilot Agent"
+      to: "MCP Client in Copilot"
+      type: "internal"
+      label: "Tool requests"
+    - from: "Copilot Chat Interface"
+      to: "GitHub Copilot Agent"
+      type: "internal"
+      label: "Process requests"
+
+  # MCP Protocol flows
+  mcp_flows:
+    - from: "MCP Client in Copilot"
+      to: "JSON-RPC Transport"
+      type: "protocol"
+      label: "MCP requests"
+    - from: "JSON-RPC Transport"
+      to: "Confluence MCP Server"
+      type: "stdio"
+      label: "JSON-RPC over stdio"
+      style: "dashed"
+
+  # Server internal flows
+  server_flows:
+    - from: "Confluence MCP Server"
+      to: "Traditional Tools"
+      type: "internal"
+      label: "CRUD operations"
+    - from: "Confluence MCP Server"
+      to: "AI Tools"
+      type: "internal"
+      label: "Intelligent analysis"
+    - from: "AI Tools"
+      to: "LLM Processor"
+      type: "processing"
+      label: "Content analysis"
+
+  # LLM flows
+  llm_flows:
+    - from: "LLM Processor"
+      to: "OpenAI GPT"
+      type: "api_call"
+      label: "Analysis requests"
+    - from: "LLM Processor"
+      to: "Anthropic Claude"
+      type: "api_call"
+      label: "Analysis requests"
+    - from: "LLM Processor"
+      to: "Ollama Local"
+      type: "local_call"
+      label: "Local processing"
+
+  # Confluence API flows
+  confluence_flows:
+    - from: "Traditional Tools"
+      to: "Confluence REST API"
+      type: "api_call"
+      label: "API operations"
+    - from: "OAuth 1.0a Helper"
+      to: "Confluence REST API"
+      type: "auth"
+      label: "Authentication"
+      style: "dashed"
+    - from: "Confluence REST API"
+      to: "Spaces"
+      type: "data_access"
+      label: "Space operations"
+    - from: "Confluence REST API"
+      to: "Pages & Content"
+      type: "data_access"
+      label: "Content operations"
+
+  # External integration flows
+  external_flows:
+    - from: "GitHub Copilot Agent"
+      to: "GitHub Repositories"
+      type: "integration"
+      label: "Code context"
+      style: "dashed"
+    - from: "Confluence MCP Server"
+      to: "Jira Issues"
+      type: "integration"
+      label: "Issue linking"
+      style: "dashed"
+
+# Define example workflows
+workflows:
+  
+  developer_qa:
+    name: "Developer Q&A Workflow"
+    steps:
+      - "Developer asks: '@copilot How do I deploy to staging?'"
+      - "Copilot processes natural language query"
+      - "MCP Client calls ask_confluence tool"
+      - "Server searches Confluence + LLM analysis"
+      - "Returns intelligent answer with sources"
+      - "Copilot provides comprehensive response"
+
+  code_documentation:
+    name: "Code Documentation Workflow"
+    steps:
+      - "Developer requests: '/doc Generate API docs'"
+      - "Copilot analyzes code context"
+      - "MCP searches for documentation standards"
+      - "Server finds company guidelines"
+      - "Generates docs following standards"
+      - "Returns formatted documentation"
+
+  code_review:
+    name: "Enhanced Code Review Workflow"
+    steps:
+      - "Developer requests: '@copilot review this code'"
+      - "Copilot analyzes code patterns"
+      - "MCP retrieves coding standards"
+      - "Server compares against guidelines"
+      - "LLM provides detailed analysis"
+      - "Returns review with suggestions"
+
+# Visual styling instructions
+styling:
+  layout: "hierarchical"
+  direction: "top-to-bottom"
+  
+  colors:
+    user_layer: "#e1f5fe"
+    copilot_layer: "#f3e5f5"
+    mcp_layer: "#e8f5e8"
+    server_layer: "#fff3e0"
+    llm_layer: "#fce4ec"
+    confluence_layer: "#e3f2fd"
+    external_layer: "#f1f8e9"
+
+  connection_styles:
+    solid: "normal data flow"
+    dashed: "authentication or optional flow"
+    dotted: "external integration"
+
+  annotations:
+    - position: "top"
+      text: "🚀 Complete GitHub Copilot + Confluence MCP Integration"
+    - position: "bottom"
+      text: "Enables AI-powered development with company documentation"
+
+# Key features to highlight
+highlights:
+  - "Bi-directional integration between Copilot and Confluence"
+  - "Traditional CRUD operations + AI-powered analysis"
+  - "Multiple LLM provider support"
+  - "Secure OAuth 1.0a authentication"
+  - "Real-time documentation access during development"
+  - "Context-aware responses using company knowledge base"
