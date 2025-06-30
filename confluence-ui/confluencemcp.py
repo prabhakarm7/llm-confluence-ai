@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Confluence MCP Server with OAuth 1.0a Authentication
+Confluence MCP Server with LLM-Powered Intelligent Search
 """
 
 import asyncio
@@ -12,6 +12,7 @@ import base64
 import secrets
 import time
 import urllib.parse
+import re
 from typing import Any, Dict, List, Optional, Sequence
 from dataclasses import dataclass
 
@@ -36,25 +37,155 @@ class OAuth1Config:
     consumer_secret: str
     access_token: str
     access_token_secret: str
+    cert_key: Optional[str] = None
+    signature_method: str = "HMAC-SHA1"
 
 
 @dataclass
-class ConfluencePage:
-    id: str
-    title: str
-    type: str
-    status: str
-    space_key: str
-    version: int
-    content: Optional[str] = None
+class LLMConfig:
+    """Configuration for LLM integration"""
+    provider: str = "openai"  # openai, anthropic, ollama, etc.
+    api_key: Optional[str] = None
+    model: str = "gpt-3.5-turbo"
+    api_url: Optional[str] = None  # For custom endpoints like Ollama
+    max_tokens: int = 1000
+    temperature: float = 0.1
 
 
-@dataclass
-class ConfluenceSpace:
-    key: str
-    name: str
-    type: str
-    status: str
+class LLMProcessor:
+    """Handles LLM interactions for processing Confluence content"""
+    
+    def __init__(self, config: LLMConfig):
+        self.config = config
+        self.http_client = httpx.AsyncClient(timeout=60.0)
+    
+    async def analyze_content(self, question: str, confluence_content: str) -> str:
+        """Use LLM to analyze Confluence content and answer questions"""
+        
+        prompt = f"""You are a helpful assistant that answers questions based on Confluence documentation content.
+
+QUESTION: {question}
+
+CONFLUENCE CONTENT:
+{confluence_content}
+
+Instructions:
+1. Analyze the provided Confluence content carefully
+2. Answer the question based ONLY on the information provided in the content
+3. If the answer isn't in the content, say "The information needed to answer this question is not available in the provided content"
+4. Provide specific references to relevant sections when possible
+5. Be concise but thorough in your response
+
+ANSWER:"""
+
+        try:
+            if self.config.provider == "openai":
+                return await self._call_openai(prompt)
+            elif self.config.provider == "anthropic":
+                return await self._call_anthropic(prompt)
+            elif self.config.provider == "ollama":
+                return await self._call_ollama(prompt)
+            else:
+                return f"Unsupported LLM provider: {self.config.provider}"
+        
+        except Exception as e:
+            return f"Error processing with LLM: {str(e)}"
+    
+    async def _call_openai(self, prompt: str) -> str:
+        """Call OpenAI API"""
+        if not self.config.api_key:
+            raise Exception("OpenAI API key not provided")
+        
+        payload = {
+            "model": self.config.model,
+            "messages": [{"role": "user", "content": prompt}],
+            "max_tokens": self.config.max_tokens,
+            "temperature": self.config.temperature
+        }
+        
+        headers = {
+            "Authorization": f"Bearer {self.config.api_key}",
+            "Content-Type": "application/json"
+        }
+        
+        response = await self.http_client.post(
+            "https://api.openai.com/v1/chat/completions",
+            json=payload,
+            headers=headers
+        )
+        
+        response.raise_for_status()
+        result = response.json()
+        return result["choices"][0]["message"]["content"]
+    
+    async def _call_anthropic(self, prompt: str) -> str:
+        """Call Anthropic Claude API"""
+        if not self.config.api_key:
+            raise Exception("Anthropic API key not provided")
+        
+        payload = {
+            "model": self.config.model,
+            "max_tokens": self.config.max_tokens,
+            "messages": [{"role": "user", "content": prompt}]
+        }
+        
+        headers = {
+            "x-api-key": self.config.api_key,
+            "Content-Type": "application/json",
+            "anthropic-version": "2023-06-01"
+        }
+        
+        response = await self.http_client.post(
+            "https://api.anthropic.com/v1/messages",
+            json=payload,
+            headers=headers
+        )
+        
+        response.raise_for_status()
+        result = response.json()
+        return result["content"][0]["text"]
+    
+    async def _call_ollama(self, prompt: str) -> str:
+        """Call Ollama local API"""
+        api_url = self.config.api_url or "http://localhost:11434"
+        
+        payload = {
+            "model": self.config.model,
+            "prompt": prompt,
+            "stream": False,
+            "options": {
+                "temperature": self.config.temperature,
+                "num_predict": self.config.max_tokens
+            }
+        }
+        
+        response = await self.http_client.post(
+            f"{api_url}/api/generate",
+            json=payload
+        )
+        
+        response.raise_for_status()
+        result = response.json()
+        return result["response"]
+    
+    async def extract_key_info(self, content: str, topic: str) -> str:
+        """Extract key information about a specific topic from content"""
+        prompt = f"""Extract and summarize key information about "{topic}" from the following content:
+
+CONTENT:
+{content}
+
+Please provide:
+1. Main points about {topic}
+2. Important details or specifications
+3. Any relevant examples or instructions
+4. Key warnings or limitations
+
+If the topic is not mentioned in the content, respond with "No information about {topic} found in the provided content."
+
+SUMMARY:"""
+
+        return await self.analyze_content(topic, content)
 
 
 class OAuth1Helper:
@@ -65,50 +196,71 @@ class OAuth1Helper:
         self.consumer_secret = config.consumer_secret
         self.access_token = config.access_token
         self.access_token_secret = config.access_token_secret
+        self.cert_key = config.cert_key
+        self.signature_method = config.signature_method
     
     def _generate_nonce(self) -> str:
-        """Generate a random nonce"""
         return secrets.token_hex(16)
     
     def _generate_timestamp(self) -> str:
-        """Generate current timestamp"""
         return str(int(time.time()))
     
     def _percent_encode(self, value: str) -> str:
-        """Percent encode a string according to OAuth spec"""
         return urllib.parse.quote(str(value), safe='')
     
     def _generate_signature(self, method: str, url: str, parameters: Dict[str, str]) -> str:
-        """Generate OAuth signature using HMAC-SHA1"""
-        # Sort parameters
         sorted_params = sorted(parameters.items())
         param_string = '&'.join([f"{self._percent_encode(k)}={self._percent_encode(v)}" 
                                 for k, v in sorted_params])
         
-        # Create signature base string
         signature_base = '&'.join([
             method.upper(),
             self._percent_encode(url),
             self._percent_encode(param_string)
         ])
         
-        # Create signing key
-        signing_key = '&'.join([
-            self._percent_encode(self.consumer_secret),
-            self._percent_encode(self.access_token_secret)
-        ])
-        
-        # Generate signature
-        signature = hmac.new(
-            signing_key.encode('utf-8'),
-            signature_base.encode('utf-8'),
-            hashlib.sha1
-        ).digest()
-        
-        return base64.b64encode(signature).decode('utf-8')
+        if self.signature_method == "RSA-SHA1" and self.cert_key:
+            try:
+                from cryptography.hazmat.primitives import hashes, serialization
+                from cryptography.hazmat.primitives.asymmetric import padding
+                
+                if self.cert_key.startswith('-----BEGIN'):
+                    private_key = serialization.load_pem_private_key(
+                        self.cert_key.encode('utf-8'), password=None
+                    )
+                else:
+                    with open(self.cert_key, 'rb') as key_file:
+                        private_key = serialization.load_pem_private_key(
+                            key_file.read(), password=None
+                        )
+                
+                signature = private_key.sign(
+                    signature_base.encode('utf-8'),
+                    padding.PKCS1v15(),
+                    hashes.SHA1()
+                )
+                
+                return base64.b64encode(signature).decode('utf-8')
+                
+            except ImportError:
+                raise Exception("cryptography library required for RSA-SHA1")
+            except Exception as e:
+                raise Exception(f"RSA signature generation failed: {e}")
+        else:
+            signing_key = '&'.join([
+                self._percent_encode(self.consumer_secret),
+                self._percent_encode(self.access_token_secret)
+            ])
+            
+            signature = hmac.new(
+                signing_key.encode('utf-8'),
+                signature_base.encode('utf-8'),
+                hashlib.sha1
+            ).digest()
+            
+            return base64.b64encode(signature).decode('utf-8')
     
     def generate_auth_header(self, method: str, url: str, additional_params: Dict[str, str] = None) -> str:
-        """Generate OAuth authorization header"""
         if additional_params is None:
             additional_params = {}
             
@@ -118,7 +270,7 @@ class OAuth1Helper:
         oauth_params = {
             'oauth_consumer_key': self.consumer_key,
             'oauth_nonce': nonce,
-            'oauth_signature_method': 'HMAC-SHA1',
+            'oauth_signature_method': self.signature_method,
             'oauth_timestamp': timestamp,
             'oauth_token': self.access_token,
             'oauth_version': '1.0',
@@ -128,7 +280,6 @@ class OAuth1Helper:
         signature = self._generate_signature(method, url, oauth_params)
         oauth_params['oauth_signature'] = signature
         
-        # Build authorization header
         auth_params = []
         for key in sorted(oauth_params.keys()):
             auth_params.append(f'{self._percent_encode(key)}="{self._percent_encode(oauth_params[key])}"')
@@ -136,25 +287,24 @@ class OAuth1Helper:
         return f"OAuth {', '.join(auth_params)}"
 
 
-class ConfluenceMCPServer:
-    """MCP Server for Confluence with OAuth 1.0a authentication"""
+class ConfluenceLLMServer:
+    """Enhanced MCP Server with LLM-powered Confluence search"""
     
-    def __init__(self, config: OAuth1Config):
-        self.config = config
-        self.oauth = OAuth1Helper(config)
-        self.server = Server("confluence-oauth-mcp-server")
+    def __init__(self, oauth_config: OAuth1Config, llm_config: LLMConfig):
+        self.oauth_config = oauth_config
+        self.llm_config = llm_config
+        self.oauth = OAuth1Helper(oauth_config)
+        self.llm = LLMProcessor(llm_config)
+        self.server = Server("confluence-llm-mcp-server")
         self.http_client = httpx.AsyncClient(timeout=30.0)
         
-        # Register handlers
         self._setup_handlers()
     
     def _setup_handlers(self):
-        """Set up MCP request handlers"""
-        
         @self.server.list_tools()
         async def handle_list_tools() -> List[Tool]:
-            """List available tools"""
             return [
+                # Original Confluence tools
                 Tool(
                     name="get_spaces",
                     description="Get all Confluence spaces",
@@ -266,7 +416,7 @@ class ConfluenceMCPServer:
                 ),
                 Tool(
                     name="search_content",
-                    description="Search for content in Confluence",
+                    description="Search for content in Confluence (basic search)",
                     inputSchema={
                         "type": "object",
                         "properties": {
@@ -321,13 +471,125 @@ class ConfluenceMCPServer:
                         },
                         "required": ["contentId"]
                     }
+                ),
+                # New LLM-powered tools
+                Tool(
+                    name="ask_confluence",
+                    description="🧠 Ask a question and get an intelligent answer from Confluence content",
+                    inputSchema={
+                        "type": "object",
+                        "properties": {
+                            "question": {
+                                "type": "string",
+                                "description": "The question to ask about Confluence content"
+                            },
+                            "search_query": {
+                                "type": "string",
+                                "description": "Optional: Specific search query (if not provided, will be derived from question)"
+                            },
+                            "space_key": {
+                                "type": "string",
+                                "description": "Optional: Limit search to specific space"
+                            },
+                            "max_pages": {
+                                "type": "number",
+                                "description": "Maximum number of pages to analyze (default: 5)"
+                            }
+                        },
+                        "required": ["question"]
+                    }
+                ),
+                Tool(
+                    name="find_information",
+                    description="🔍 Find specific information about a topic from Confluence",
+                    inputSchema={
+                        "type": "object",
+                        "properties": {
+                            "topic": {
+                                "type": "string",
+                                "description": "The topic or subject to find information about"
+                            },
+                            "search_scope": {
+                                "type": "string",
+                                "description": "Search scope (e.g., 'space=DEV', 'type=page AND label=api')"
+                            },
+                            "max_pages": {
+                                "type": "number",
+                                "description": "Maximum number of pages to search (default: 3)"
+                            }
+                        },
+                        "required": ["topic"]
+                    }
+                ),
+                Tool(
+                    name="compare_documents",
+                    description="📊 Compare information across multiple Confluence pages",
+                    inputSchema={
+                        "type": "object",
+                        "properties": {
+                            "page_ids": {
+                                "type": "array",
+                                "items": {"type": "string"},
+                                "description": "List of page IDs to compare"
+                            },
+                            "comparison_aspect": {
+                                "type": "string",
+                                "description": "What aspect to compare (e.g., 'features', 'requirements', 'procedures')"
+                            }
+                        },
+                        "required": ["page_ids", "comparison_aspect"]
+                    }
+                ),
+                Tool(
+                    name="summarize_space",
+                    description="📝 Get an LLM-generated summary of a Confluence space",
+                    inputSchema={
+                        "type": "object",
+                        "properties": {
+                            "space_key": {
+                                "type": "string",
+                                "description": "The space key to summarize"
+                            },
+                            "focus_area": {
+                                "type": "string",
+                                "description": "Optional: Specific area to focus on in the summary"
+                            },
+                            "max_pages": {
+                                "type": "number",
+                                "description": "Maximum number of pages to include (default: 10)"
+                            }
+                        },
+                        "required": ["space_key"]
+                    }
+                ),
+                Tool(
+                    name="search_with_content",
+                    description="🔍 Enhanced search that includes page content in results",
+                    inputSchema={
+                        "type": "object",
+                        "properties": {
+                            "query": {
+                                "type": "string",
+                                "description": "The search query (CQL)"
+                            },
+                            "limit": {
+                                "type": "number",
+                                "description": "Maximum number of results (default: 5)"
+                            },
+                            "include_content": {
+                                "type": "boolean",
+                                "description": "Whether to include page content (default: true)"
+                            }
+                        },
+                        "required": ["query"]
+                    }
                 )
             ]
         
         @self.server.call_tool()
-        async def handle_call_tool(name: str, arguments: Dict[str, Any]) -> Sequence[types.TextContent | types.ImageContent | types.EmbeddedResource]:
-            """Handle tool calls"""
+        async def handle_call_tool(name: str, arguments: Dict[str, Any]) -> Sequence[types.TextContent]:
             try:
+                # Original Confluence tools
                 if name == "get_spaces":
                     return await self.get_spaces(
                         arguments.get("limit", 25),
@@ -370,63 +632,44 @@ class ConfluenceMCPServer:
                     return await self.get_user_info()
                 elif name == "get_content_properties":
                     return await self.get_content_properties(arguments["contentId"])
+                elif name == "search_with_content":
+                    return await self.search_with_content(
+                        arguments["query"],
+                        arguments.get("limit", 5),
+                        arguments.get("include_content", True)
+                    )
+                # New LLM-powered tools
+                elif name == "ask_confluence":
+                    return await self.ask_confluence(
+                        arguments["question"],
+                        arguments.get("search_query"),
+                        arguments.get("space_key"),
+                        arguments.get("max_pages", 5)
+                    )
+                elif name == "find_information":
+                    return await self.find_information(
+                        arguments["topic"],
+                        arguments.get("search_scope"),
+                        arguments.get("max_pages", 3)
+                    )
+                elif name == "compare_documents":
+                    return await self.compare_documents(
+                        arguments["page_ids"],
+                        arguments["comparison_aspect"]
+                    )
+                elif name == "summarize_space":
+                    return await self.summarize_space(
+                        arguments["space_key"],
+                        arguments.get("focus_area"),
+                        arguments.get("max_pages", 10)
+                    )
                 else:
                     raise ValueError(f"Unknown tool: {name}")
             except Exception as e:
                 return [TextContent(type="text", text=f"Error: {str(e)}")]
-        
-        @self.server.list_resources()
-        async def handle_list_resources() -> List[Resource]:
-            """List available resources"""
-            try:
-                spaces_result = await self.get_spaces(50)
-                spaces_text = spaces_result[0].text
-                
-                resources = []
-                for line in spaces_text.split('\n'):
-                    if 'Key:' in line:
-                        import re
-                        match = re.search(r'Key: (\w+)', line)
-                        if match:
-                            space_key = match.group(1)
-                            resources.append(Resource(
-                                uri=f"confluence://space/{space_key}",
-                                name=f"Confluence Space: {space_key}",
-                                description=f"Pages and content from Confluence space {space_key}",
-                                mimeType="text/plain"
-                            ))
-                
-                return resources
-            except Exception as e:
-                return []
-        
-        @self.server.read_resource()
-        async def handle_read_resource(uri: str) -> str:
-            """Read resource content"""
-            if not uri.startswith("confluence://"):
-                raise ValueError("Only confluence:// URIs are supported")
-            
-            parts = uri.split('/')
-            if len(parts) < 4:
-                raise ValueError("Invalid confluence URI format")
-            
-            resource_type = parts[2]
-            identifier = parts[3]
-            
-            if resource_type == 'space':
-                pages_result = await self.get_pages(identifier, 50)
-                return pages_result[0].text
-            elif resource_type == 'page':
-                page_content = await self.get_page_content(identifier, "body.storage,version,space")
-                return page_content[0].text
-            else:
-                raise ValueError(f"Unsupported resource type: {resource_type}")
     
     async def _make_request(self, endpoint: str, method: str = "GET", data: Dict[str, Any] = None) -> Dict[str, Any]:
-        """Make authenticated request to Confluence API"""
-        url = f"{self.config.base_url}/rest/api{endpoint}"
-        
-        # Generate OAuth authorization header
+        url = f"{self.oauth_config.base_url}/rest/api{endpoint}"
         auth_header = self.oauth.generate_auth_header(method, url)
         
         headers = {
@@ -441,20 +684,43 @@ class ConfluenceMCPServer:
                 response = await self.http_client.get(url, headers=headers)
             elif method == "POST":
                 response = await self.http_client.post(url, headers=headers, json=data)
-            elif method == "PUT":
-                response = await self.http_client.put(url, headers=headers, json=data)
-            elif method == "DELETE":
-                response = await self.http_client.delete(url, headers=headers)
             else:
-                raise ValueError(f"Unsupported HTTP method: {method}")
+                raise ValueError(f"Unsupported method: {method}")
             
             response.raise_for_status()
             return response.json() if response.content else {}
             
         except httpx.HTTPStatusError as e:
             raise Exception(f"Confluence API error: {e.response.status_code} {e.response.text}")
-        except Exception as e:
-            raise Exception(f"Request failed: {str(e)}")
+    
+    def _clean_content(self, html_content: str) -> str:
+        """Clean Confluence HTML content for LLM processing"""
+        if not html_content:
+            return "No content available"
+        
+        # Remove Confluence macros
+        content = re.sub(r'<ac:structured-macro[^>]*>.*?</ac:structured-macro>', '', html_content, flags=re.DOTALL)
+        content = re.sub(r'<ac:parameter[^>]*>.*?</ac:parameter>', '', content, flags=re.DOTALL)
+        
+        # Convert HTML to readable text
+        content = re.sub(r'<h([1-6])[^>]*>(.*?)</h\1>', r'\n## \2\n', content)
+        content = re.sub(r'<p[^>]*>(.*?)</p>', r'\1\n', content)
+        content = re.sub(r'<br\s*/?>', '\n', content)
+        content = re.sub(r'<li[^>]*>(.*?)</li>', r'• \1\n', content)
+        content = re.sub(r'<strong[^>]*>(.*?)</strong>', r'**\1**', content)
+        content = re.sub(r'<em[^>]*>(.*?)</em>', r'*\1*', content)
+        content = re.sub(r'<code[^>]*>(.*?)</code>', r'`\1`', content)
+        
+        # Remove remaining HTML tags
+        content = re.sub(r'<[^>]+>', '', content)
+        
+        # Clean up whitespace
+        content = re.sub(r'\n\s*\n\s*\n', '\n\n', content)
+        content = content.strip()
+        
+        return content if content else "No readable content found"
+    
+    # ========== ORIGINAL CONFLUENCE METHODS ==========
     
     async def get_spaces(self, limit: int = 25, space_type: Optional[str] = None) -> List[TextContent]:
         """Get all Confluence spaces"""
@@ -571,7 +837,7 @@ class ConfluenceMCPServer:
         return [TextContent(type="text", text=result_text)]
     
     async def search_content(self, query: str, limit: int = 25, expand: Optional[str] = None) -> List[TextContent]:
-        """Search for content in Confluence"""
+        """Search for content in Confluence (basic search)"""
         endpoint = f"/content/search?cql={urllib.parse.quote(query)}&limit={limit}"
         if expand:
             endpoint += f"&expand={expand}"
@@ -626,6 +892,239 @@ class ConfluenceMCPServer:
         result_text = f"Content Properties for {content_id}:\n\n" + "\n".join(property_list)
         return [TextContent(type="text", text=result_text)]
     
+    async def search_with_content(self, query: str, limit: int = 5, include_content: bool = True) -> List[TextContent]:
+        """Enhanced search that includes page content in results"""
+        endpoint = f"/content/search?cql={urllib.parse.quote(query)}&limit={limit}&expand=body.storage,space,version"
+        
+        data = await self._make_request(endpoint)
+        results = data.get('results', [])
+        
+        if not include_content:
+            # Return just metadata (original behavior)
+            result_list = []
+            for result in results:
+                result_list.append(
+                    f"Title: {result.get('title', 'N/A')}\n"
+                    f"ID: {result.get('id', 'N/A')}\n"
+                    f"Type: {result.get('type', 'N/A')}\n"
+                    f"Space: {result.get('space', {}).get('key', 'N/A')}\n"
+                )
+            
+            result_text = f"Found {len(results)} results for query \"{query}\":\n\n" + "\n".join(result_list)
+            return [TextContent(type="text", text=result_text)]
+        
+        # Include full content in results
+        detailed_results = []
+        for result in results:
+            title = result.get('title', 'N/A')
+            page_id = result.get('id', 'N/A')
+            space_key = result.get('space', {}).get('key', 'N/A')
+            content = result.get('body', {}).get('storage', {}).get('value', 'No content available')
+            
+            # Truncate content if too long (optional)
+            if len(content) > 2000:
+                content = content[:2000] + "... [truncated]"
+            
+            page_info = (
+                f"=== {title} ===\n"
+                f"ID: {page_id}\n"
+                f"Space: {space_key}\n"
+                f"Content:\n{content}\n\n"
+            )
+            detailed_results.append(page_info)
+        
+        result_text = f"Found {len(results)} results with content for query \"{query}\":\n\n" + "".join(detailed_results)
+        return [TextContent(type="text", text=result_text)]
+    
+    # ========== LLM-POWERED METHODS ==========
+    
+    async def ask_confluence(self, question: str, search_query: Optional[str] = None, 
+                           space_key: Optional[str] = None, max_pages: int = 5) -> List[TextContent]:
+        """Ask a question and get an intelligent answer from Confluence content"""
+        
+        # Generate search query if not provided
+        if not search_query:
+            search_query = self._generate_search_query(question, space_key)
+        
+        # Search for relevant pages
+        endpoint = f"/content/search?cql={urllib.parse.quote(search_query)}&limit={max_pages}&expand=body.storage,space,version"
+        search_results = await self._make_request(endpoint)
+        
+        pages = search_results.get('results', [])
+        if not pages:
+            return [TextContent(type="text", text=f"No relevant pages found for your question: {question}")]
+        
+        # Collect content from all relevant pages
+        all_content = []
+        page_info = []
+        
+        for page in pages:
+            title = page.get('title', 'Untitled')
+            space = page.get('space', {}).get('key', 'Unknown')
+            content = page.get('body', {}).get('storage', {}).get('value', '')
+            
+            clean_content = self._clean_content(content)
+            if clean_content and clean_content != "No readable content found":
+                all_content.append(f"=== {title} (Space: {space}) ===\n{clean_content}")
+                page_info.append(f"• {title} (Space: {space})")
+        
+        if not all_content:
+            return [TextContent(type="text", text="Found pages but no readable content was available.")]
+        
+        # Combine content for LLM analysis
+        combined_content = "\n\n".join(all_content)
+        
+        # Use LLM to analyze and answer
+        llm_response = await self.llm.analyze_content(question, combined_content)
+        
+        # Format final response
+        response = f"""**Question:** {question}
+
+**Answer based on Confluence content:**
+{llm_response}
+
+**Sources analyzed:**
+{chr(10).join(page_info)}
+
+---
+*Answer generated from {len(pages)} Confluence page(s) using {self.llm_config.provider} {self.llm_config.model}*"""
+        
+        return [TextContent(type="text", text=response)]
+    
+    async def find_information(self, topic: str, search_scope: Optional[str] = None, 
+                             max_pages: int = 3) -> List[TextContent]:
+        """Find specific information about a topic"""
+        
+        search_query = f"text ~ \"{topic}\""
+        if search_scope:
+            search_query = f"{search_scope} AND {search_query}"
+        
+        endpoint = f"/content/search?cql={urllib.parse.quote(search_query)}&limit={max_pages}&expand=body.storage,space"
+        results = await self._make_request(endpoint)
+        
+        pages = results.get('results', [])
+        if not pages:
+            return [TextContent(type="text", text=f"No information found about: {topic}")]
+        
+        all_content = []
+        for page in pages:
+            title = page.get('title', 'Untitled')
+            content = page.get('body', {}).get('storage', {}).get('value', '')
+            clean_content = self._clean_content(content)
+            all_content.append(f"=== {title} ===\n{clean_content}")
+        
+        combined_content = "\n\n".join(all_content)
+        
+        # Use LLM to extract relevant information
+        extracted_info = await self.llm.extract_key_info(combined_content, topic)
+        
+        response = f"""**Information about: {topic}**
+
+{extracted_info}
+
+**Sources:** {len(pages)} page(s) analyzed"""
+        
+        return [TextContent(type="text", text=response)]
+    
+    async def compare_documents(self, page_ids: List[str], comparison_aspect: str) -> List[TextContent]:
+        """Compare information across multiple pages"""
+        
+        pages_content = []
+        for page_id in page_ids:
+            try:
+                endpoint = f"/content/{page_id}?expand=body.storage,space"
+                page_data = await self._make_request(endpoint)
+                
+                title = page_data.get('title', 'Untitled')
+                content = page_data.get('body', {}).get('storage', {}).get('value', '')
+                clean_content = self._clean_content(content)
+                
+                pages_content.append(f"=== {title} ===\n{clean_content}")
+            except Exception as e:
+                pages_content.append(f"=== Error loading page {page_id} ===\nError: {str(e)}")
+        
+        if not pages_content:
+            return [TextContent(type="text", text="Could not load any pages for comparison.")]
+        
+        combined_content = "\n\n".join(pages_content)
+        
+        comparison_prompt = f"Compare the following documents focusing on {comparison_aspect}:\n\n{combined_content}"
+        comparison_result = await self.llm.analyze_content(
+            f"Compare these documents regarding {comparison_aspect}",
+            combined_content
+        )
+        
+        response = f"""**Document Comparison: {comparison_aspect}**
+
+{comparison_result}
+
+**Documents compared:** {len(page_ids)} page(s)"""
+        
+        return [TextContent(type="text", text=response)]
+    
+    async def summarize_space(self, space_key: str, focus_area: Optional[str] = None, 
+                            max_pages: int = 10) -> List[TextContent]:
+        """Generate LLM summary of a Confluence space"""
+        
+        search_query = f"space = {space_key} AND type = page"
+        endpoint = f"/content/search?cql={urllib.parse.quote(search_query)}&limit={max_pages}&expand=body.storage"
+        
+        results = await self._make_request(endpoint)
+        pages = results.get('results', [])
+        
+        if not pages:
+            return [TextContent(type="text", text=f"No pages found in space: {space_key}")]
+        
+        # Collect content
+        all_content = []
+        for page in pages:
+            title = page.get('title', 'Untitled')
+            content = page.get('body', {}).get('storage', {}).get('value', '')
+            clean_content = self._clean_content(content)
+            all_content.append(f"=== {title} ===\n{clean_content}")
+        
+        combined_content = "\n\n".join(all_content)
+        
+        # Generate summary
+        summary_question = f"Provide a comprehensive summary of this Confluence space"
+        if focus_area:
+            summary_question += f", focusing on {focus_area}"
+        
+        summary = await self.llm.analyze_content(summary_question, combined_content)
+        
+        response = f"""**Space Summary: {space_key}**
+{f"**Focus: {focus_area}**" if focus_area else ""}
+
+{summary}
+
+**Based on {len(pages)} pages from the space**"""
+        
+        return [TextContent(type="text", text=response)]
+    
+    def _generate_search_query(self, question: str, space_key: Optional[str] = None) -> str:
+        """Generate a Confluence search query from a natural language question"""
+        
+        # Extract key terms from question
+        import re
+        
+        # Remove common question words
+        question_clean = re.sub(r'\b(what|how|where|when|why|who|is|are|can|could|should|would|do|does|did)\b', '', question.lower())
+        
+        # Extract remaining meaningful words
+        words = re.findall(r'\b\w{3,}\b', question_clean)
+        
+        if not words:
+            search_query = "type = page"
+        else:
+            # Create text search for key terms
+            search_terms = ' OR '.join([f'text ~ "{word}"' for word in words[:5]])  # Limit to 5 terms
+            search_query = f"({search_terms}) AND type = page"
+        
+        if space_key:
+            search_query = f"space = {space_key} AND {search_query}"
+        
+        return search_query
+    
     async def run(self):
         """Run the MCP server"""
         from mcp.server.stdio import stdio_server
@@ -635,7 +1134,7 @@ class ConfluenceMCPServer:
                 read_stream,
                 write_stream,
                 InitializationOptions(
-                    server_name="confluence-oauth-mcp-server",
+                    server_name="confluence-llm-mcp-server",
                     server_version="1.0.0",
                     capabilities=self.server.get_capabilities(
                         notification_options=NotificationOptions(),
@@ -647,16 +1146,29 @@ class ConfluenceMCPServer:
 
 async def main():
     """Main entry point"""
-    # OAuth 1.0a Configuration from environment variables
-    config = OAuth1Config(
+    
+    # OAuth Configuration
+    oauth_config = OAuth1Config(
         base_url=os.getenv("CONFLUENCE_BASE_URL", "https://your-domain.atlassian.net/wiki"),
         consumer_key=os.getenv("CONFLUENCE_CONSUMER_KEY", "your-consumer-key"),
         consumer_secret=os.getenv("CONFLUENCE_CONSUMER_SECRET", "your-consumer-secret"),
         access_token=os.getenv("CONFLUENCE_ACCESS_TOKEN", "your-access-token"),
-        access_token_secret=os.getenv("CONFLUENCE_ACCESS_TOKEN_SECRET", "your-access-token-secret")
+        access_token_secret=os.getenv("CONFLUENCE_ACCESS_TOKEN_SECRET", "your-access-token-secret"),
+        cert_key=os.getenv("CONFLUENCE_CERT_KEY"),
+        signature_method=os.getenv("CONFLUENCE_SIGNATURE_METHOD", "HMAC-SHA1")
     )
     
-    server = ConfluenceMCPServer(config)
+    # LLM Configuration
+    llm_config = LLMConfig(
+        provider=os.getenv("LLM_PROVIDER", "openai"),  # openai, anthropic, ollama
+        api_key=os.getenv("LLM_API_KEY"),
+        model=os.getenv("LLM_MODEL", "gpt-3.5-turbo"),
+        api_url=os.getenv("LLM_API_URL"),  # For Ollama: http://localhost:11434
+        max_tokens=int(os.getenv("LLM_MAX_TOKENS", "1000")),
+        temperature=float(os.getenv("LLM_TEMPERATURE", "0.1"))
+    )
+    
+    server = ConfluenceLLMServer(oauth_config, llm_config)
     await server.run()
 
 
