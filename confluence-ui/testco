@@ -1,0 +1,54 @@
+Perfect! Now you have the complete MCP server with ALL tools:
+🔧 Complete Tool List
+📁 Original Confluence Tools
+
+get_spaces - List all Confluence spaces
+get_pages - Get pages from a specific space
+get_page_content - Get full content of a specific page
+create_page - Create new Confluence pages
+update_page - Update existing pages
+search_content - Basic Confluence search (metadata only)
+delete_page - Delete pages
+get_user_info - Get current user information
+get_content_properties - Get content properties
+search_with_content - Enhanced search with content included
+
+🧠 New LLM-Powered Tools
+
+ask_confluence 🧠 - Ask questions and get intelligent answers
+find_information 🔍 - Find specific information about topics
+compare_documents 📊 - Compare multiple pages intelligently
+summarize_space 📝 - Generate space summaries
+
+🎯 Usage Examples
+Traditional Workflow
+python# 1. List spaces
+await server.get_spaces(limit=10)
+
+# 2. Get pages from specific space
+await server.get_pages("DEV", limit=20)
+
+# 3. Get specific page content
+await server.get_page_content("123456")
+
+# 4. Search for pages
+await server.search_content("API documentation")
+LLM-Enhanced Workflow
+python# 1. Ask intelligent questions
+await server.ask_confluence("How do I deploy to production?")
+
+# 2. Find specific information
+await server.find_information("API rate limits", search_scope="space=DEV")
+
+# 3. Compare documents
+await server.compare_documents(["123", "456"], "security features")
+
+# 4. Get space summary
+await server.summarize_space("DEV", focus_area="deployment")
+🔄 Best of Both Worlds
+You can now:
+✅ Use traditional tools for exact operations (create, update, delete pages)
+✅ Use LLM tools for intelligent analysis and Q&A
+✅ Combine both approaches - search traditionally, then analyze with LLM
+✅ Progressive enhancement - start basic, add AI when needed
+🚀 Environment Setup
