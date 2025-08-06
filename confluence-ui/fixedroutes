@@ -1,0 +1,318 @@
+# src/api/routes.py
+from fastapi import APIRouter, HTTPException, Query
+from typing import Optional, List, Dict, Any
+from ..models.schemas import GraphQuery, GraphFilters, NodeType, FilterOptions
+from ..services.graph_service import graph_service
+
+router = APIRouter()
+
+@router.get("/filters/options", response_model=FilterOptions)
+async def get_filter_options(
+    node_types: Optional[List[str]] = Query(None, description="Filter options by node types"),
+    region: Optional[str] = Query(None, description="Filter options by specific region")
+):
+    """
+    Get all available filter options for UI population
+    
+    Returns all unique values from the database that can be used
+    to populate dropdowns and filter controls in the UI.
+    
+    Optional parameters can be used to get filtered options
+    (e.g., only get channels available for a specific region)
+    """
+    try:
+        # You could modify the service to accept these parameters
+        options = await graph_service.get_filter_options()
+        return options
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error retrieving filter options: {str(e)}")
+
+@router.get("/graph/data")
+async def get_graph_data_get(
+    # Geographic Filters
+    regions: Optional[List[str]] = Query(None, description="Static regions: NAI, EMEA, APAC"),
+    sales_regions: Optional[List[str]] = Query(None, description="Sales regions (market segments)"),
+    channels: Optional[List[str]] = Query(None, description="Filter by channels"),
+    
+    # Node Type Filters
+    node_types: Optional[List[str]] = Query(None, description="Filter by node types: CONSULTANT, COMPANY, PRODUCT, FIELD_CONSULTANT"),
+    
+    # Specific Entity Filters (by name/id)
+    field_consultant: Optional[List[str]] = Query(None, description="Filter by specific field consultants"),
+    product: Optional[List[str]] = Query(None, description="Filter by specific products"),
+    company: Optional[List[str]] = Query(None, description="Filter by specific companies"),
+    consultant: Optional[List[str]] = Query(None, description="Filter by specific consultants"),
+    
+    # Product & Asset Filters
+    asset_classes: Optional[List[str]] = Query(None, description="Filter by asset classes"),
+    mandate_status: Optional[List[str]] = Query(None, description="Filter by mandate status"),
+    
+    # Status & Privacy Filters
+    privacy_levels: Optional[List[str]] = Query(None, description="Filter by privacy levels"),
+    level_of_influence: Optional[List[str]] = Query(None, description="Filter by influence level"),
+    
+    # Advisor Filters
+    pca: Optional[List[str]] = Query(None, description="Filter by Primary Consultant Advisor"),
+    aca: Optional[List[str]] = Query(None, description="Filter by Alternate Client Advisor"),
+    
+    # Relationship-based Rating Filters
+    rating_min: Optional[float] = Query(None, description="Minimum rating value"),
+    rating_max: Optional[float] = Query(None, description="Maximum rating value"), 
+    rating_change: Optional[List[str]] = Query(None, description="Filter by rating change (Upgrade/Downgrade/Stable)"),
+    rank_group: Optional[List[str]] = Query(None, description="Filter by rank group (Positive/Negative)"),
+    rank_value: Optional[List[str]] = Query(None, description="Filter by rank value"),
+    rank_order_min: Optional[int] = Query(None, description="Minimum rank order"),
+    rank_order_max: Optional[int] = Query(None, description="Maximum rank order"),
+    
+    # Pagination
+    limit: Optional[int] = Query(1000, ge=1, le=10000, description="Maximum nodes to return"),
+    offset: Optional[int] = Query(0, ge=0, description="Number of nodes to skip")
+):
+    """GET endpoint for comprehensive graph data retrieval with all available filters"""
+    
+    # Convert string node_types to enum
+    parsed_node_types = None
+    if node_types:
+        try:
+            parsed_node_types = [NodeType(nt.upper()) for nt in node_types]
+        except ValueError as e:
+            raise HTTPException(status_code=400, detail=f"Invalid node_type: {str(e)}")
+    
+    # Build rating range filter
+    rating_range = None
+    if rating_min is not None or rating_max is not None:
+        rating_range = {}
+        if rating_min is not None:
+            rating_range['min'] = rating_min
+        if rating_max is not None:
+            rating_range['max'] = rating_max
+    
+    # Build rank order range filter  
+    rank_order_range = None
+    if rank_order_min is not None or rank_order_max is not None:
+        rank_order_range = {}
+        if rank_order_min is not None:
+            rank_order_range['min'] = rank_order_min
+        if rank_order_max is not None:
+            rank_order_range['max'] = rank_order_max
+    
+    # Create comprehensive filters object
+    filters = GraphFilters(
+        # Geographic
+        regions=regions,
+        sales_regions=sales_regions,
+        channels=channels,
+        
+        # Node types
+        node_types=parsed_node_types,
+        
+        # Specific entities
+        field_consultant=field_consultant,
+        product=product,
+        company=company,
+        consultant=consultant,
+        
+        # Product & Asset
+        asset_classes=asset_classes,
+        mandate_status=mandate_status,
+        
+        # Status & Privacy
+        privacy_levels=privacy_levels,
+        level_of_influence=level_of_influence,
+        
+        # Advisors
+        pca=pca,
+        aca=aca,
+        
+        # Relationship-based ratings
+        rating_range=rating_range,
+        rating_change=rating_change,
+        rank_group=rank_group,
+        rank_value=rank_value,
+        rank_order_range=rank_order_range
+    )
+    
+    query = GraphQuery(filters=filters, limit=limit, offset=offset)
+    return await get_graph_data(query)
+
+@router.post("/graph/data")
+async def get_graph_data(query: GraphQuery):
+    """
+    Get graph data with filters based on your existing Neo4j structure
+    
+    Supports filtering by:
+    - Node types (CONSULTANT, COMPANY, PRODUCT, FIELD_CONSULTANT)
+    - Regions (from region or sales_region properties)
+    - Channels
+    - Asset classes
+    - Mandate status
+    - Privacy levels
+    - Level of influence
+    """
+    try:
+        result = await graph_service.get_graph_data(query)
+        return {
+            "success": True,
+            "data": result
+        }
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error retrieving graph data: {str(e)}")
+
+@router.get("/graph/node/{node_id}")
+async def get_node_details(node_id: str):
+    """Get detailed information about a specific node"""
+    try:
+        result = await graph_service.get_node_details(node_id)
+        if not result:
+            raise HTTPException(status_code=404, detail="Node not found")
+        
+        return {
+            "success": True,
+            "data": result
+        }
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error retrieving node details: {str(e)}")
+
+@router.get("/graph/summary")
+async def get_graph_summary():
+    """Get overall graph statistics"""
+    try:
+        with graph_service.neo4j_conn.get_session() as session:
+            result = session.run(graph_service.query_builder.build_summary_query())
+            
+            summary = {
+                "node_counts": {},
+                "relationship_counts": {},
+                "total_nodes": 0,
+                "total_relationships": 0
+            }
+            
+            for record in result:
+                if record['node_labels']:
+                    for label in record['node_labels']:
+                        summary["node_counts"][label] = record['node_count']
+                        summary["total_nodes"] += record['node_count']
+                
+                if record['relationship_type']:
+                    summary["relationship_counts"][record['relationship_type']] = record['relationship_count']
+                    summary["total_relationships"] += record['relationship_count']
+            
+            return {
+                "success": True,
+                "data": summary
+            }
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error retrieving graph summary: {str(e)}")
+
+# Convenience endpoint for common filters
+@router.get("/graph/consultants")
+async def get_consultants(
+    regions: Optional[List[str]] = Query(None, description="Static regions: NAI, EMEA, APAC"),
+    sales_regions: Optional[List[str]] = Query(None, description="Sales regions (market segments)"),
+    channel: Optional[str] = Query(None),
+    level_of_influence: Optional[List[str]] = Query(None),
+    privacy: Optional[str] = Query(None),
+    pca: Optional[List[str]] = Query(None, description="Primary Consultant Advisor"),
+    aca: Optional[List[str]] = Query(None, description="Alternate Client Advisor")
+):
+    """Get consultants with optional filters"""
+    filters = GraphFilters(
+        node_types=[NodeType.CONSULTANT],
+        regions=regions,
+        sales_regions=sales_regions,
+        channels=[channel] if channel else None,
+        level_of_influence=level_of_influence,
+        privacy_levels=[privacy] if privacy else None,
+        pca=pca,
+        aca=aca
+    )
+    
+    query = GraphQuery(filters=filters)
+    return await get_graph_data(query)
+
+@router.get("/graph/companies")
+async def get_companies(
+    regions: Optional[List[str]] = Query(None, description="Static regions: NAI, EMEA, APAC"),
+    sales_regions: Optional[List[str]] = Query(None, description="Sales regions (market segments)"),
+    channel: Optional[List[str]] = Query(None),
+    privacy: Optional[str] = Query(None),
+    pca: Optional[List[str]] = Query(None, description="Primary Consultant Advisor"),
+    aca: Optional[List[str]] = Query(None, description="Alternate Client Advisor")
+):
+    """Get companies with optional filters"""
+    filters = GraphFilters(
+        node_types=[NodeType.COMPANY],
+        regions=regions,
+        sales_regions=sales_regions,
+        channels=channel,
+        privacy_levels=[privacy] if privacy else None,
+        pca=pca,
+        aca=aca
+    )
+    
+    query = GraphQuery(filters=filters)
+    return await get_graph_data(query)
+
+@router.get("/graph/products")
+async def get_products(
+    asset_class: Optional[List[str]] = Query(None),
+    mandate_status: Optional[List[str]] = Query(None),
+    product_name: Optional[List[str]] = Query(None)
+):
+    """Get products with optional filters"""
+    filters = GraphFilters(
+        node_types=[NodeType.PRODUCT],
+        asset_classes=asset_class,
+        mandate_status=mandate_status,
+        product=product_name
+    )
+    
+    query = GraphQuery(filters=filters)
+    return await get_graph_data(query)
+
+@router.get("/graph/field-consultants")
+async def get_field_consultants(
+    consultant_name: Optional[List[str]] = Query(None),
+    region: Optional[List[str]] = Query(None)
+):
+    """Get field consultants with optional filters"""
+    filters = GraphFilters(
+        node_types=[NodeType.FIELD_CONSULTANT],
+        field_consultant=consultant_name,
+        regions=region
+    )
+    
+    query = GraphQuery(filters=filters)
+    return await get_graph_data(query)
+
+@router.post("/graph/ratings")
+async def get_consultant_product_ratings(
+    filters: Dict[str, Any]
+):
+    """Get consultant product ratings with relationship-based filters"""
+    graph_filters = GraphFilters(
+        rating_range=filters.get('rating_range'),
+        rating_change=filters.get('rating_change'),
+        rank_group=filters.get('rank_group'),
+        rank_value=filters.get('rank_value'),
+        rank_order_range=filters.get('rank_order_range')
+    )
+    
+    query = GraphQuery(filters=graph_filters)
+    return await get_graph_data(query)
+
+@router.get("/graph/advisors")
+async def get_advisors(
+    advisor_type: str = Query(..., description="Type: 'pca' or 'aca'"),
+    advisor_name: Optional[List[str]] = Query(None)
+):
+    """Get nodes by advisor type (PCA or ACA)"""
+    if advisor_type == "pca":
+        filters = GraphFilters(pca=advisor_name)
+    elif advisor_type == "aca":
+        filters = GraphFilters(aca=advisor_name)
+    else:
+        raise HTTPException(status_code=400, detail="advisor_type must be 'pca' or 'aca'")
+    
+    query = GraphQuery(filters=filters)
+    return await get_graph_data(query)
