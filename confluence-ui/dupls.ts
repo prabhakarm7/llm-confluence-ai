@@ -377,20 +377,20 @@ const FilterPanel: React.FC<{
   }
 
   return (
-    <Box sx={{ height: '100%', overflow: 'auto', p: 2 }}>
+    <Box sx={{ height: '100%', overflow: 'auto', p: 1 }}>
       {/* Filter Header */}
-      <Paper sx={{ p: 2, mb: 2, bgcolor: 'background.default' }}>
-        <Box display="flex" alignItems="center" justifyContent="space-between" mb={2}>
+      <Paper sx={{ p: 1.5, mb: 1.5, bgcolor: 'background.default' }}>
+        <Box display="flex" alignItems="center" justifyContent="space-between" mb={1.5}>
           <Box display="flex" alignItems="center">
-            <FilterList sx={{ mr: 1 }} />
-            <Typography variant="h6">Network Filters</Typography>
+            <FilterList sx={{ mr: 1, fontSize: 18 }} />
+            <Typography variant="subtitle1" fontWeight="bold">Network Filters</Typography>
             <Badge badgeContent={getActiveFiltersCount()} color="primary" sx={{ ml: 1 }}>
               <Box />
             </Badge>
           </Box>
           <Tooltip title="Clear all filters">
             <IconButton onClick={clearFilters} size="small">
-              <Clear />
+              <Clear fontSize="small" />
             </IconButton>
           </Tooltip>
         </Box>
@@ -403,27 +403,28 @@ const FilterPanel: React.FC<{
           value={searchTerm}
           onChange={(e) => setSearchTerm(e.target.value)}
           InputProps={{
-            startAdornment: <Search sx={{ mr: 1, color: 'text.secondary' }} />,
+            startAdornment: <Search sx={{ mr: 1, color: 'text.secondary', fontSize: 18 }} />,
           }}
-          sx={{ mb: 2 }}
+          sx={{ mb: 1.5 }}
         />
         
         <Button
           variant="contained"
           onClick={onApplyFilters}
           disabled={loading}
-          startIcon={loading ? <CircularProgress size={16} /> : <RefreshIcon />}
+          startIcon={loading ? <CircularProgress size={14} /> : <RefreshIcon fontSize="small" />}
           fullWidth
+          size="small"
         >
           {loading ? 'Loading...' : 'Apply Filters'}
         </Button>
       </Paper>
 
-      {/* All Filters - Simple Layout */}
-      <Stack spacing={3}>
+      {/* All Filters - Compact Layout */}
+      <Stack spacing={1.5}>
         {/* Node Types */}
-        <Paper sx={{ p: 2 }}>
-          <Typography variant="subtitle1" fontWeight="bold" gutterBottom sx={{ display: 'flex', alignItems: 'center' }}>
+        <Paper sx={{ p: 1.5 }}>
+          <Typography variant="body2" fontWeight="bold" gutterBottom sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
             🔹 Node Types
           </Typography>
           <FormGroup row>
@@ -432,6 +433,7 @@ const FilterPanel: React.FC<{
                 key={type}
                 control={
                   <Checkbox
+                    size="small"
                     checked={filters.node_types?.includes(type) || false}
                     onChange={(e) => {
                       const current = filters.node_types || [];
@@ -442,127 +444,128 @@ const FilterPanel: React.FC<{
                     }}
                   />
                 }
-                label={type.replace('_', ' ')}
+                label={<Typography variant="caption">{type.replace('_', ' ')}</Typography>}
               />
             ))}
           </FormGroup>
         </Paper>
 
         {/* Regions */}
-        <Paper sx={{ p: 2 }}>
-          <Typography variant="subtitle1" fontWeight="bold" gutterBottom>
+        <Paper sx={{ p: 1.5 }}>
+          <Typography variant="body2" fontWeight="bold" gutterBottom sx={{ mb: 1 }}>
             📍 Regions
           </Typography>
           <FormControl fullWidth size="small">
-            <InputLabel>Select Regions</InputLabel>
+            <InputLabel sx={{ fontSize: '0.875rem' }}>Select Regions</InputLabel>
             <Select
               multiple
               value={filters.regions || []}
               onChange={(e) => handleFilterChange('regions', e.target.value as string[])}
               renderValue={(selected) => (
-                <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5 }}>
+                <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.3 }}>
                   {selected.map((value) => (
-                    <Chip key={value} label={value} size="small" />
+                    <Chip key={value} label={value} size="small" sx={{ fontSize: '0.7rem', height: 20 }} />
                   ))}
                 </Box>
               )}
             >
               {filterSearchResults(filterOptions.regions, searchTerm).map(region => (
-                <MenuItem key={region} value={region}>{region}</MenuItem>
+                <MenuItem key={region} value={region} sx={{ fontSize: '0.875rem' }}>{region}</MenuItem>
               ))}
             </Select>
           </FormControl>
         </Paper>
 
         {/* Sales Regions */}
-        <Paper sx={{ p: 2 }}>
-          <Typography variant="subtitle1" fontWeight="bold" gutterBottom>
+        <Paper sx={{ p: 1.5 }}>
+          <Typography variant="body2" fontWeight="bold" gutterBottom sx={{ mb: 1 }}>
             🌎 Sales Regions
           </Typography>
           <FormControl fullWidth size="small">
-            <InputLabel>Select Sales Regions</InputLabel>
+            <InputLabel sx={{ fontSize: '0.875rem' }}>Select Sales Regions</InputLabel>
             <Select
               multiple
               value={filters.sales_regions || []}
               onChange={(e) => handleFilterChange('sales_regions', e.target.value as string[])}
               renderValue={(selected) => (
-                <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5 }}>
+                <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.3 }}>
                   {selected.map((value) => (
-                    <Chip key={value} label={value} size="small" />
+                    <Chip key={value} label={value} size="small" sx={{ fontSize: '0.7rem', height: 20 }} />
                   ))}
                 </Box>
               )}
             >
               {filterSearchResults(filterOptions.sales_regions, searchTerm).map(region => (
-                <MenuItem key={region} value={region}>{region}</MenuItem>
+                <MenuItem key={region} value={region} sx={{ fontSize: '0.875rem' }}>{region}</MenuItem>
               ))}
             </Select>
           </FormControl>
         </Paper>
 
         {/* Channels */}
-        <Paper sx={{ p: 2 }}>
-          <Typography variant="subtitle1" fontWeight="bold" gutterBottom>
+        <Paper sx={{ p: 1.5 }}>
+          <Typography variant="body2" fontWeight="bold" gutterBottom sx={{ mb: 1 }}>
             💼 Channels
           </Typography>
           <FormControl fullWidth size="small">
-            <InputLabel>Select Channels</InputLabel>
+            <InputLabel sx={{ fontSize: '0.875rem' }}>Select Channels</InputLabel>
             <Select
               multiple
               value={filters.channels || []}
               onChange={(e) => handleFilterChange('channels', e.target.value as string[])}
               renderValue={(selected) => (
-                <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5 }}>
+                <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.3 }}>
                   {selected.map((value) => (
-                    <Chip key={value} label={value} size="small" />
+                    <Chip key={value} label={value} size="small" sx={{ fontSize: '0.7rem', height: 20 }} />
                   ))}
                 </Box>
               )}
             >
               {filterSearchResults(filterOptions.channels, searchTerm).map(channel => (
-                <MenuItem key={channel} value={channel}>{channel}</MenuItem>
+                <MenuItem key={channel} value={channel} sx={{ fontSize: '0.875rem' }}>{channel}</MenuItem>
               ))}
             </Select>
           </FormControl>
         </Paper>
 
         {/* Asset Classes */}
-        <Paper sx={{ p: 2 }}>
-          <Typography variant="subtitle1" fontWeight="bold" gutterBottom>
+        <Paper sx={{ p: 1.5 }}>
+          <Typography variant="body2" fontWeight="bold" gutterBottom sx={{ mb: 1 }}>
             📊 Asset Classes
           </Typography>
           <FormControl fullWidth size="small">
-            <InputLabel>Select Asset Classes</InputLabel>
+            <InputLabel sx={{ fontSize: '0.875rem' }}>Select Asset Classes</InputLabel>
             <Select
               multiple
               value={filters.asset_classes || []}
               onChange={(e) => handleFilterChange('asset_classes', e.target.value as string[])}
               renderValue={(selected) => (
-                <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5 }}>
+                <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.3 }}>
                   {selected.map((value) => (
-                    <Chip key={value} label={value} size="small" />
+                    <Chip key={value} label={value} size="small" sx={{ fontSize: '0.7rem', height: 20 }} />
                   ))}
                 </Box>
               )}
             >
               {filterSearchResults(filterOptions.asset_classes, searchTerm).map(asset => (
-                <MenuItem key={asset} value={asset}>{asset}</MenuItem>
+                <MenuItem key={asset} value={asset} sx={{ fontSize: '0.875rem' }}>{asset}</MenuItem>
               ))}
             </Select>
           </FormControl>
         </Paper>
 
         {/* Mandate Status */}
-        <Paper sx={{ p: 2 }}>
-          <Typography variant="subtitle1" fontWeight="bold" gutterBottom>
+        <Paper sx={{ p: 1.5 }}>
+          <Typography variant="body2" fontWeight="bold" gutterBottom sx={{ mb: 1 }}>
             📋 Mandate Status
           </Typography>
-          <Stack direction="row" spacing={1} sx={{ flexWrap: 'wrap', gap: 1 }}>
+          <Stack direction="row" spacing={0.5} sx={{ flexWrap: 'wrap', gap: 0.5 }}>
             {filterOptions.mandate_status.map(status => (
               <FormControlLabel
                 key={status}
                 control={
                   <Checkbox
+                    size="small"
                     checked={filters.mandate_status?.includes(status) || false}
                     onChange={(e) => {
                       const current = filters.mandate_status || [];
@@ -582,6 +585,7 @@ const FilterPanel: React.FC<{
                       status === 'At Risk' ? 'error' : 'warning'
                     }
                     variant="outlined"
+                    sx={{ fontSize: '0.7rem', height: 22 }}
                   />
                 }
               />
@@ -590,60 +594,60 @@ const FilterPanel: React.FC<{
         </Paper>
 
         {/* Primary Consultant Advisor (PCA) */}
-        <Paper sx={{ p: 2 }}>
-          <Typography variant="subtitle1" fontWeight="bold" gutterBottom>
+        <Paper sx={{ p: 1.5 }}>
+          <Typography variant="body2" fontWeight="bold" gutterBottom sx={{ mb: 1 }}>
             👤 Primary Consultant Advisor (PCA)
           </Typography>
           <FormControl fullWidth size="small">
-            <InputLabel>Select PCA</InputLabel>
+            <InputLabel sx={{ fontSize: '0.875rem' }}>Select PCA</InputLabel>
             <Select
               multiple
               value={filters.pca || []}
               onChange={(e) => handleFilterChange('pca', e.target.value as string[])}
               renderValue={(selected) => (
-                <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5 }}>
+                <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.3 }}>
                   {selected.map((value) => (
-                    <Chip key={value} label={value} size="small" />
+                    <Chip key={value} label={value} size="small" sx={{ fontSize: '0.7rem', height: 20 }} />
                   ))}
                 </Box>
               )}
             >
               {filterSearchResults(filterOptions.pca_options, searchTerm).map(pca => (
-                <MenuItem key={pca} value={pca}>{pca}</MenuItem>
+                <MenuItem key={pca} value={pca} sx={{ fontSize: '0.875rem' }}>{pca}</MenuItem>
               ))}
             </Select>
           </FormControl>
         </Paper>
 
         {/* Alternate Client Advisor (ACA) */}
-        <Paper sx={{ p: 2 }}>
-          <Typography variant="subtitle1" fontWeight="bold" gutterBottom>
+        <Paper sx={{ p: 1.5 }}>
+          <Typography variant="body2" fontWeight="bold" gutterBottom sx={{ mb: 1 }}>
             🤝 Alternate Client Advisor (ACA)
           </Typography>
           <FormControl fullWidth size="small">
-            <InputLabel>Select ACA</InputLabel>
+            <InputLabel sx={{ fontSize: '0.875rem' }}>Select ACA</InputLabel>
             <Select
               multiple
               value={filters.aca || []}
               onChange={(e) => handleFilterChange('aca', e.target.value as string[])}
               renderValue={(selected) => (
-                <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5 }}>
+                <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.3 }}>
                   {selected.map((value) => (
-                    <Chip key={value} label={value} size="small" />
+                    <Chip key={value} label={value} size="small" sx={{ fontSize: '0.7rem', height: 20 }} />
                   ))}
                 </Box>
               )}
             >
               {filterSearchResults(filterOptions.aca_options, searchTerm).map(aca => (
-                <MenuItem key={aca} value={aca}>{aca}</MenuItem>
+                <MenuItem key={aca} value={aca} sx={{ fontSize: '0.875rem' }}>{aca}</MenuItem>
               ))}
             </Select>
           </FormControl>
         </Paper>
 
         {/* Privacy Levels */}
-        <Paper sx={{ p: 2 }}>
-          <Typography variant="subtitle1" fontWeight="bold" gutterBottom>
+        <Paper sx={{ p: 1.5 }}>
+          <Typography variant="body2" fontWeight="bold" gutterBottom sx={{ mb: 1 }}>
             🔒 Privacy Levels
           </Typography>
           <FormGroup row>
@@ -652,6 +656,7 @@ const FilterPanel: React.FC<{
                 key={privacy}
                 control={
                   <Checkbox
+                    size="small"
                     checked={filters.privacy_levels?.includes(privacy) || false}
                     onChange={(e) => {
                       const current = filters.privacy_levels || [];
@@ -662,49 +667,50 @@ const FilterPanel: React.FC<{
                     }}
                   />
                 }
-                label={privacy}
+                label={<Typography variant="caption">{privacy}</Typography>}
               />
             ))}
           </FormGroup>
         </Paper>
 
         {/* Level of Influence */}
-        <Paper sx={{ p: 2 }}>
-          <Typography variant="subtitle1" fontWeight="bold" gutterBottom>
+        <Paper sx={{ p: 1.5 }}>
+          <Typography variant="body2" fontWeight="bold" gutterBottom sx={{ mb: 1 }}>
             ⭐ Level of Influence
           </Typography>
           <FormControl fullWidth size="small">
-            <InputLabel>Select Influence Level</InputLabel>
+            <InputLabel sx={{ fontSize: '0.875rem' }}>Select Influence Level</InputLabel>
             <Select
               multiple
               value={filters.level_of_influence || []}
               onChange={(e) => handleFilterChange('level_of_influence', e.target.value as string[])}
               renderValue={(selected) => (
-                <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5 }}>
+                <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.3 }}>
                   {selected.map((value) => (
-                    <Chip key={value} label={value} size="small" />
+                    <Chip key={value} label={value} size="small" sx={{ fontSize: '0.7rem', height: 20 }} />
                   ))}
                 </Box>
               )}
             >
               {filterSearchResults(filterOptions.level_of_influence, searchTerm).map(level => (
-                <MenuItem key={level} value={level}>{level}</MenuItem>
+                <MenuItem key={level} value={level} sx={{ fontSize: '0.875rem' }}>{level}</MenuItem>
               ))}
             </Select>
           </FormControl>
         </Paper>
 
         {/* Rating Changes */}
-        <Paper sx={{ p: 2 }}>
-          <Typography variant="subtitle1" fontWeight="bold" gutterBottom>
+        <Paper sx={{ p: 1.5 }}>
+          <Typography variant="body2" fontWeight="bold" gutterBottom sx={{ mb: 1 }}>
             📈 Rating Changes
           </Typography>
-          <Stack direction="row" spacing={1} sx={{ flexWrap: 'wrap', gap: 1 }}>
+          <Stack direction="row" spacing={0.5} sx={{ flexWrap: 'wrap', gap: 0.5 }}>
             {filterOptions.rating_changes.map(change => (
               <FormControlLabel
                 key={change}
                 control={
                   <Checkbox
+                    size="small"
                     checked={filters.rating_change?.includes(change) || false}
                     onChange={(e) => {
                       const current = filters.rating_change || [];
@@ -721,6 +727,7 @@ const FilterPanel: React.FC<{
                     size="small"
                     color={change === 'Upgrade' ? 'success' : 'error'}
                     variant="outlined"
+                    sx={{ fontSize: '0.7rem', height: 22 }}
                   />
                 }
               />
@@ -729,16 +736,17 @@ const FilterPanel: React.FC<{
         </Paper>
 
         {/* Rank Groups */}
-        <Paper sx={{ p: 2 }}>
-          <Typography variant="subtitle1" fontWeight="bold" gutterBottom>
+        <Paper sx={{ p: 1.5 }}>
+          <Typography variant="body2" fontWeight="bold" gutterBottom sx={{ mb: 1 }}>
             🏆 Rank Groups
           </Typography>
-          <Stack direction="row" spacing={1} sx={{ flexWrap: 'wrap', gap: 1 }}>
+          <Stack direction="row" spacing={0.5} sx={{ flexWrap: 'wrap', gap: 0.5 }}>
             {filterOptions.rank_groups.map(group => (
               <FormControlLabel
                 key={group}
                 control={
                   <Checkbox
+                    size="small"
                     checked={filters.rank_group?.includes(group) || false}
                     onChange={(e) => {
                       const current = filters.rank_group || [];
@@ -755,6 +763,7 @@ const FilterPanel: React.FC<{
                     size="small"
                     color={group === 'Positive' ? 'primary' : 'warning'}
                     variant="outlined"
+                    sx={{ fontSize: '0.7rem', height: 22 }}
                   />
                 }
               />
